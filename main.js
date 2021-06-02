@@ -1,4 +1,5 @@
-const { app, BrowserWindow } = require('electron');
+const path = require("path");
+const { app, BrowserWindow, ipcMain } = require('electron');
 const singleInstanceLock = app.requestSingleInstanceLock();
 
 const { version } = require('./package.json');
@@ -21,7 +22,7 @@ function createMainWindow () {
       nodeIntegration: false,
       contextIsolation: false,
       // partition: "persist:rcappstorage",
-      reload: "./preload.js",
+      preload: path.join(__dirname, "preload.js"),
       nativeWindowOpen: true,
       disableBlinkFeatures: 'AcceleratedSmallCanvases',
       enableRemoteModule: false,
@@ -75,4 +76,8 @@ app.on('activate', () => {
 
 app.on('browser-window-created', (_, window) => {
   window.setMenu(null);
+});
+
+ipcMain.on('show-notifications-count', (_, count) => {
+  app.setBadgeCount(count);
 });
