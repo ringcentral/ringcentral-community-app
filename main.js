@@ -1,8 +1,6 @@
 const path = require("path");
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, session } = require('electron');
 const singleInstanceLock = app.requestSingleInstanceLock();
-
-const { version } = require('./package.json');
 
 if (!singleInstanceLock) {
   console.warn('App already running');
@@ -13,29 +11,45 @@ if (!singleInstanceLock) {
 let mainWindow;
 function createMainWindow () {
   // Create the browser window.
+  const sess = session.fromPartition('persist:rcappstorage');
+  const defaultUserAgent = sess.getUserAgent();
+  const userAgent = defaultUserAgent.replace(`Electron/${process.versions.electron} `, '')
+  sess.setUserAgent(userAgent);
+  const webPreferences = {
+    nodeIntegration: false,
+    contextIsolation: false,
+    session: sess,
+    preload: path.join(__dirname, 'preload.js'),
+    nativeWindowOpen: true,
+    disableBlinkFeatures: 'AcceleratedSmallCanvases',
+    enableRemoteModule: false,
+  };
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     minWidth: 640,
     minHeight: 480,
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: false,
-      // partition: "persist:rcappstorage",
-      preload: path.join(__dirname, "preload.js"),
-      nativeWindowOpen: true,
-      disableBlinkFeatures: 'AcceleratedSmallCanvases',
-      enableRemoteModule: false,
-    },
+    webPreferences,
     show: true,
     title: 'RingCentral (Community)',
+    icon: path.join(__dirname, '/icons/32x32.png'),
   });
   if (process.env.DEBUG == 1) {
     mainWindow.webContents.openDevTools();
   }
-// and load the index.html of the app.
-  mainWindow.loadURL('https://app.ringcentral.com', {
-    userAgent: `Chrome/${process.versions.chrome} RingCentral(Community)/${version}`,
+  mainWindow.loadURL('https://app.ringcentral.com');
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.indexOf('http') === 0) {
+      shell.openExternal(url);
+      return { action: 'deny' };
+    }
+    return {
+      action: 'allow',
+      overrideBrowserWindowOptions: {
+        webPreferences,
+        center: true
+      },
+    };
   });
 }
 
@@ -76,6 +90,9 @@ app.on('activate', () => {
 
 app.on('browser-window-created', (_, window) => {
   window.setMenu(null);
+  if (process.env.DEBUG == 1) {
+    window.openDevTools();
+  }
 });
 
 ipcMain.on('show-notifications-count', (_, count) => {

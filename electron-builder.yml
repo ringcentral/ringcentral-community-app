@@ -1,0 +1,31 @@
+appId: com.ringcentral.labs.RingCentralApp
+productName: RingCentral (Community) app
+files:
+  - package.json
+  - main.js
+  - preload.js
+  - icon.*
+  - icons/*
+directories:
+  buildResources: ./
+  output: release
+publish:
+  -
+    provider: github
+    owner: ringcentral
+    repo: ringcentral-community-app
+mac:
+  category: public.app-category.business
+win:
+  target:
+    - nsis
+linux:
+  target:
+    - deb
+    - AppImage
+    - snap
+    - rpm
+  category: Telephony
+  executableName: ringcentral-community-app
+  executableArgs:
+    - --no-sandbox

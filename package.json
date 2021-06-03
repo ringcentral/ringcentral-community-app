@@ -1,12 +1,21 @@
 {
-  "name": "RingCentral-Community",
+  "name": "ringcentral-community-app",
+  "description": "A RingCentral community app",
   "version": "0.0.1",
   "main": "main.js",
+  "homepage": "https://github.com/ringcentral/ringcentral-community-app",
   "license": "MIT",
+  "author": {
+    "name": "Embbnux Ji",
+    "email": "embbnux@embbnux.com",
+    "url": "https://github.com/embbnux"
+  },
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "package-linux": "electron-builder --linux"
   },
   "devDependencies": {
-    "electron": "^13.0.1"
+    "electron": "^13.0.1",
+    "electron-builder": "^22.10.5"
   }
 }
