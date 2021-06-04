@@ -16,11 +16,11 @@ $ yarn
 3. Start app
 
 ```
-yarn start
+$ yarn start
 ```
 
 4. Package app
 
 ```
-yarn package-linux
+$ yarn package-linux
 ```
