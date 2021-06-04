@@ -12,7 +12,7 @@ directories:
 publish:
   -
     provider: github
-    owner: ringcentral
+    owner: embbnux
     repo: ringcentral-community-app
 mac:
   category: public.app-category.business
@@ -23,7 +23,6 @@ linux:
   target:
     - deb
     - AppImage
-    - snap
     - rpm
   category: Telephony
   executableName: ringcentral-community-app

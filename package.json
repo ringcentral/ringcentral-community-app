@@ -12,7 +12,8 @@
   },
   "scripts": {
     "start": "electron .",
-    "package-linux": "electron-builder --linux"
+    "package-linux": "electron-builder --linux",
+    "package-release": "electron-builder --linux -p always"
   },
   "devDependencies": {
     "electron": "^13.0.1",
