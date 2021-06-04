@@ -39,7 +39,10 @@ function createMainWindow () {
   }
   mainWindow.loadURL('https://app.ringcentral.com');
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.indexOf('http') === 0) {
+    if (
+      url.indexOf('http') === 0 &&
+      url.indexOf('https://v.ringcentral.com') === -1
+    ) {
       shell.openExternal(url);
       return { action: 'deny' };
     }
@@ -51,6 +54,11 @@ function createMainWindow () {
     childWindow.webContents.setUserAgent(userAgent);
     childWindow.webContents.on('will-navigate', (e, url) => {
       e.preventDefault();
+      if (url.indexOf('https://meetings.ringcentral.com') > -1) {
+        shell.openExternal(url);
+        childWindow.close();
+        return;
+      }
       childWindow.webContents.loadURL(url, { userAgent });
     });
   });
