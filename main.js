@@ -45,11 +45,21 @@ function createMainWindow () {
     }
     return {
       action: 'allow',
-      overrideBrowserWindowOptions: {
-        webPreferences,
-        center: true
-      },
     };
+  });
+  mainWindow.webContents.on('did-create-window', (childWindow) => {
+    childWindow.webContents.setUserAgent(userAgent);
+    childWindow.webContents.on('will-navigate', (e, url) => {
+      e.preventDefault();
+      childWindow.webContents.loadURL(url, { userAgent });
+    });
+  });
+  sess.webRequest.onBeforeSendHeaders((details, callback) => {
+    details.requestHeaders['User-Agent'] = userAgent;
+    callback({
+      cancel: false,
+      requestHeaders: details.requestHeaders
+    });
   });
 }
 
