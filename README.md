@@ -18,3 +18,9 @@ $ yarn
 ```
 yarn start
 ```
+
+4. Package app
+
+```
+yarn package-linux
+```
