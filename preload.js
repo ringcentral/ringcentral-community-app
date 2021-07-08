@@ -19,9 +19,21 @@ window.addEventListener('load', () => {
   });
 });
 
-window.navigator.mediaDevices.getDisplayMedia = (options) => {
-  console.log('getDisplayMedia');
-  console.log(options);
+window.navigator.mediaDevices.getDisplayMedia = async (options) => {
+  if (navigator.userAgent.indexOf('PipeWire') > -1) {
+    const sources = await desktopCapturer.getSources({ types: ['screen'] });
+    return window.navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: {
+        mandatory: {
+          chromeMediaSource: 'desktop',
+          chromeMediaSourceId: sources[0].id,
+          maxWidth: options.video.width.max,
+          maxHeight: options.video.height.max,
+        }
+      }
+    });
+  }
   return new Promise(async (resolve, reject) => {
     try {
       const sources = await desktopCapturer.getSources({ types: ['screen', 'window'] });

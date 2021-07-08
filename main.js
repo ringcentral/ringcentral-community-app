@@ -2,6 +2,16 @@ const path = require("path");
 const { app, BrowserWindow, ipcMain, shell, session } = require('electron');
 const singleInstanceLock = app.requestSingleInstanceLock();
 
+let enablePipeWire = false;
+if (
+  process.env.ORIGINAL_XDG_CURRENT_DESKTOP === 'GNOME' ||
+  process.env.ORIGINAL_XDG_CURRENT_DESKTOP === 'KDE' ||
+  process.env.ORIGINAL_XDG_CURRENT_DESKTOP === 'SWAY'
+) {
+  enablePipeWire = true;
+  app.commandLine.appendSwitch('enable-features', 'WebRTCPipeWireCapturer');
+}
+
 if (!singleInstanceLock) {
   console.warn('App already running');
 	app.quit();
@@ -13,7 +23,10 @@ function createMainWindow () {
   // Create the browser window.
   const sess = session.fromPartition('persist:rcappstorage');
   const defaultUserAgent = sess.getUserAgent();
-  const userAgent = defaultUserAgent.replace(`Electron/${process.versions.electron} `, '')
+  let userAgent = defaultUserAgent.replace(`Electron/${process.versions.electron} `, '');
+  if (enablePipeWire) {
+    userAgent = `${userAgent} PipeWire`;
+  }
   sess.setUserAgent(userAgent);
   const webPreferences = {
     nodeIntegration: false,
@@ -41,6 +54,7 @@ function createMainWindow () {
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (
       url.indexOf('http') === 0 &&
+      url.indexOf('authorize') === -1 &&
       url.indexOf('https://v.ringcentral.com') === -1
     ) {
       shell.openExternal(url);
