@@ -1,6 +1,7 @@
 # RingCentral (Community) app
 
-This app is built based on RingCentral web app `https://app.ringcentral.com` and `Electron.js`.
+This app is built based on RingCentral web app `https://app.ringcentral.com` and `Electron.js`. 
+It aims to build a community version of [RingCentral desktop app](https://www.ringcentral.com/apps/rc-app) for Linux, and work for other OS.
 
 ![RingCentral community app in ubuntu](https://user-images.githubusercontent.com/7036536/120785928-37491200-c560-11eb-8eaf-30afce528aca.png)
 
