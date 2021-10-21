@@ -1,7 +1,7 @@
 {
   "name": "ringcentral-community-app",
   "description": "A RingCentral community app",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "main": "main.js",
   "homepage": "https://github.com/ringcentral/ringcentral-community-app",
   "license": "MIT",

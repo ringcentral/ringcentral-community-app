@@ -1,5 +1,5 @@
-const path = require("path");
-const { app, BrowserWindow, ipcMain, shell, session } = require('electron');
+const path = require('path');
+const { app, BrowserWindow, ipcMain, shell, session, Menu, Tray } = require('electron');
 const singleInstanceLock = app.requestSingleInstanceLock();
 
 let enablePipeWire = false;
@@ -14,12 +14,33 @@ if (
 
 if (!singleInstanceLock) {
   console.warn('App already running');
-	app.quit();
+  app.quit();
   return;
 }
 
 let mainWindow;
-function createMainWindow () {
+let tray;
+let isQuiting;
+
+function createTray(iconPath) {
+  tray = new Tray(iconPath);
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: 'Show App', click: () => {
+        mainWindow.show();
+      }
+    },
+    {
+      label: 'Quit', click: () => {
+        app.quit();
+      }
+    },
+  ]);
+  tray.setToolTip('RingCentral Community App');
+  tray.setContextMenu(contextMenu);
+}
+
+function createMainWindow() {
   // Create the browser window.
   const sess = session.fromPartition('persist:rcappstorage');
   const defaultUserAgent = sess.getUserAgent();
@@ -37,6 +58,7 @@ function createMainWindow () {
     disableBlinkFeatures: 'AcceleratedSmallCanvases',
     enableRemoteModule: false,
   };
+  const iconPath = path.join(__dirname, 'icons', '16x16.png');
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -45,7 +67,7 @@ function createMainWindow () {
     webPreferences,
     show: true,
     title: 'RingCentral (Community)',
-    icon: path.join(__dirname, '/icons/32x32.png'),
+    icon: iconPath,
   });
   if (process.env.DEBUG == 1) {
     mainWindow.webContents.openDevTools();
@@ -83,7 +105,22 @@ function createMainWindow () {
       requestHeaders: details.requestHeaders
     });
   });
+
+  if (!tray) {
+    createTray(iconPath);
+  }
+  mainWindow.on('close', (event) => {
+    if (!isQuiting) {
+      event.preventDefault();
+      mainWindow.hide();
+      event.returnValue = false;
+    }
+  });
 }
+
+app.on('before-quit', () => {
+  isQuiting = true;
+});
 
 app.on('ready', createMainWindow);
 
@@ -107,7 +144,7 @@ app.on('window-all-closed', () => {
 });
 
 function showMainWindow() {
-// On OS X it's common to re-create a window in the app when the
+  // On OS X it's common to re-create a window in the app when the
   // dock icon is clicked and there are no other windows open.
   if (mainWindow === null) {
     createMainWindow();
