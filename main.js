@@ -1,5 +1,5 @@
 const path = require('path');
-const { app, BrowserWindow, ipcMain, shell, session, Menu, Tray } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, session, Menu, Tray, globalShortcut } = require('electron');
 const singleInstanceLock = app.requestSingleInstanceLock();
 
 let enablePipeWire = false;
@@ -10,12 +10,6 @@ if (
 ) {
   enablePipeWire = true;
   app.commandLine.appendSwitch('enable-features', 'WebRTCPipeWireCapturer');
-}
-
-if (!singleInstanceLock) {
-  console.warn('App already running');
-  app.quit();
-  return;
 }
 
 let mainWindow;
@@ -118,31 +112,6 @@ function createMainWindow() {
   });
 }
 
-app.on('before-quit', () => {
-  isQuiting = true;
-});
-
-app.on('ready', createMainWindow);
-
-app.on('second-instance', (e, commandLine, cwd) => {
-  if (!mainWindow) {
-    return;
-  }
-  if (mainWindow.isMinimized()) {
-    mainWindow.restore();
-  }
-  mainWindow.focus();
-});
-
-app.on('window-all-closed', () => {
-  // On OS X it is common for applications and their menu bar
-  // to stay active until the user quits explicitly with Cmd + Q
-  mainWindow = null;
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
-});
-
 function showMainWindow() {
   // On OS X it's common to re-create a window in the app when the
   // dock icon is clicked and there are no other windows open.
@@ -153,17 +122,52 @@ function showMainWindow() {
   }
 }
 
-app.on('activate', () => {
-  showMainWindow();
-});
+if (!singleInstanceLock) {
+  console.warn('App already running');
+  app.quit();
+} else {
+  app.whenReady().then(() => {
+    globalShortcut.register('CommandOrControl+Q', () => {
+      app.quit();
+    });
+  }).then(createMainWindow);
 
-app.on('browser-window-created', (_, window) => {
-  window.setMenu(null);
-  if (process.env.DEBUG == 1) {
-    window.openDevTools();
-  }
-});
+  app.on('before-quit', () => {
+    isQuiting = true;
+  });
 
-ipcMain.on('show-notifications-count', (_, count) => {
-  app.setBadgeCount(count);
-});
+  app.on('second-instance', (e, commandLine, cwd) => {
+    if (!mainWindow) {
+      return;
+    }
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore();
+    }
+    mainWindow.show();
+    mainWindow.focus();
+  });
+
+  app.on('window-all-closed', () => {
+    // On OS X it is common for applications and their menu bar
+    // to stay active until the user quits explicitly with Cmd + Q
+    mainWindow = null;
+    if (process.platform !== 'darwin') {
+      app.quit();
+    }
+  });
+
+  app.on('activate', () => {
+    showMainWindow();
+  });
+
+  app.on('browser-window-created', (_, window) => {
+    window.setMenu(null);
+    if (process.env.DEBUG == 1) {
+      window.openDevTools();
+    }
+  });
+
+  ipcMain.on('show-notifications-count', (_, count) => {
+    app.setBadgeCount(count);
+  });
+}
