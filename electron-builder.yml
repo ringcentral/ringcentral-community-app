@@ -4,6 +4,7 @@ files:
   - package.json
   - main.js
   - preload.js
+  - meeting-preload.js
   - icon.*
   - icons/*
 directories:

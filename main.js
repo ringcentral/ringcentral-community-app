@@ -13,6 +13,7 @@ if (
 }
 
 let mainWindow;
+let meetingWindow;
 let tray;
 let isQuiting;
 
@@ -34,15 +35,21 @@ function createTray(iconPath) {
   tray.setContextMenu(contextMenu);
 }
 
-function createMainWindow() {
-  // Create the browser window.
-  const sess = session.fromPartition('persist:rcappstorage');
+function getUserAgent(sess, noElectron = false) {
   const defaultUserAgent = sess.getUserAgent();
-  let userAgent = defaultUserAgent.replace(`Electron/${process.versions.electron} `, '');
+  let userAgent = defaultUserAgent;
+  if (noElectron) {
+    userAgent = userAgent.replace(`Electron/${process.versions.electron} `, '');
+  }
   if (enablePipeWire) {
     userAgent = `${userAgent} PipeWire`;
   }
-  sess.setUserAgent(userAgent);
+  return userAgent;
+}
+
+function createMainWindow() {
+  // Create the browser window.
+  const sess = session.fromPartition('persist:rcappstorage');
   const webPreferences = {
     nodeIntegration: false,
     contextIsolation: false,
@@ -56,8 +63,8 @@ function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
-    minWidth: 640,
-    minHeight: 480,
+    minWidth: 500,
+    minHeight: 500,
     webPreferences,
     show: true,
     title: 'RingCentral (Community)',
@@ -81,22 +88,15 @@ function createMainWindow() {
     };
   });
   mainWindow.webContents.on('did-create-window', (childWindow) => {
-    childWindow.webContents.setUserAgent(userAgent);
     childWindow.webContents.on('will-navigate', (e, url) => {
-      e.preventDefault();
       if (url.indexOf('https://meetings.ringcentral.com') > -1) {
+        e.preventDefault();
         shell.openExternal(url);
         childWindow.close();
         return;
       }
-      childWindow.webContents.loadURL(url, { userAgent });
-    });
-  });
-  sess.webRequest.onBeforeSendHeaders((details, callback) => {
-    details.requestHeaders['User-Agent'] = userAgent;
-    callback({
-      cancel: false,
-      requestHeaders: details.requestHeaders
+      // const userAgent = getUserAgent(sess, true);
+      // childWindow.webContents.loadURL(url, { userAgent });
     });
   });
 
@@ -169,5 +169,64 @@ if (!singleInstanceLock) {
 
   ipcMain.on('show-notifications-count', (_, count) => {
     app.setBadgeCount(count);
+  });
+  ipcMain.on('COMMUNICATION_BETWEEN_MAIN_AND_RENDER', (_, { event, payload, body }) => {
+    // console.log('event', event);
+    // console.log('payload', payload);
+    if (event === 'rcv:open-rcv') {
+      if (!meetingWindow) {
+        const sess = session.fromPartition('persist:rcvstorage');
+        const userAgent = getUserAgent(sess, true);
+        console.log(userAgent);
+        sess.setUserAgent(userAgent);
+        meetingWindow = new BrowserWindow({
+          parent: mainWindow,
+          session: sess,
+          width: 1024,
+          height: 800,
+          minWidth: 360,
+          minHeight: 300,
+          webPreferences: {
+            contextIsolation: false,
+            session: sess,
+            preload: path.join(__dirname, 'meeting-preload.js'),
+          }
+        });
+        meetingWindow.on('close', (event) => {
+          meetingWindow = null;
+        });
+        sess.webRequest.onBeforeSendHeaders((details, callback) => {
+          details.requestHeaders['User-Agent'] = userAgent;
+          callback({
+            cancel: false,
+            requestHeaders: details.requestHeaders
+          });
+        });
+      }
+      meetingWindow.loadURL(payload.body.url);
+    }
+    if (event === 'ZOOM_ELECTRON_SERVICE:START_MEETING') {
+      const uname = payload.body.username ? payload.body.username.split(' ').join('+') : '';
+      shell.openExternal(`https://meetings.ringcentral.com/join?sid=${payload.body.meetingnumber}&uname=${uname}`);
+    }
+    if (event === 'WINDOW_MANAGER_CREATE') {
+      if (payload.body.options.alwaysOpenInBrowser) {
+        shell.openExternal(payload.body.url);
+      } else {
+        const childWindow = new BrowserWindow({
+          parent: mainWindow,
+        });
+        childWindow.loadURL(payload.body.url);
+      }
+    }
+    if (event === 'WINDOW_MANAGER_FOCUS') {
+      if (mainWindow) {
+        if (mainWindow.isMinimized()) {
+          mainWindow.restore();
+        }
+        mainWindow.show();
+        mainWindow.focus();
+      }
+    }
   });
 }
