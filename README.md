@@ -7,7 +7,7 @@ It aims to build a community version of [RingCentral desktop app](https://www.ri
 
 ## Usage
 
-> Only Tested at Ubuntu now
+> Only Tested at Ubuntu and Fedora now
 
 For Linux, download installer files (deb, AppImage and rpm) [here](https://github.com/embbnux/ringcentral-community-app/releases).
 
