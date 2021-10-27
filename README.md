@@ -38,3 +38,9 @@ $ yarn start
 ```
 $ yarn package-linux
 ```
+
+## TODO
+
+- [ ] Support custom URL scheme (Open tel/sms/meeting link by this app)
+- [ ] Support screenshot shortcut
+- [ ] Support snap package
