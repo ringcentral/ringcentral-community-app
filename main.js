@@ -1,5 +1,15 @@
 const path = require('path');
-const { app, BrowserWindow, ipcMain, shell, session, Menu, Tray, globalShortcut } = require('electron');
+const {
+  app,
+  BrowserWindow,
+  ipcMain,
+  shell,
+  session,
+  Menu,
+  MenuItem,
+  Tray,
+  globalShortcut,
+} = require('electron');
 const singleInstanceLock = app.requestSingleInstanceLock();
 
 let enablePipeWire = false;
@@ -58,6 +68,7 @@ function createMainWindow() {
     nativeWindowOpen: true,
     disableBlinkFeatures: 'AcceleratedSmallCanvases',
     enableRemoteModule: false,
+    spellcheck: true,
   };
   const iconPath = path.join(__dirname, 'icons', '16x16.png');
   mainWindow = new BrowserWindow({
@@ -98,6 +109,27 @@ function createMainWindow() {
       // const userAgent = getUserAgent(sess, true);
       // childWindow.webContents.loadURL(url, { userAgent });
     });
+  });
+  mainWindow.webContents.session.setSpellCheckerLanguages(['en-US']);
+  mainWindow.webContents.on('context-menu', (event, params) => {
+    const linkURL = params.linkURL;
+    const selectedText = params.selectionText || linkURL;
+    const isEditable = params.isEditable;
+    const hasText = selectedText.trim().length > 0;
+
+    if (!hasText && !isEditable) {
+      return;
+    }
+    const menu = new Menu()
+
+    // Add each spelling suggestion
+    for (const suggestion of params.dictionarySuggestions) {
+      menu.append(new MenuItem({
+        label: suggestion,
+        click: () => mainWindow.webContents.replaceMisspelling(suggestion)
+      }))
+    }
+    menu.popup()
   });
 
   if (!tray) {
