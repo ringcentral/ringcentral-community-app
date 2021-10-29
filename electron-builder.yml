@@ -10,6 +10,19 @@ files:
 directories:
   buildResources: ./
   output: release
+protocols:
+  -
+   name: call
+   role: Viewer
+   schemes:
+     - tel
+     - callto
+     - rcapp
+  -
+   name: meet
+   role: Viewer
+   schemes:
+     - rcvdt
 publish:
   -
     provider: github
