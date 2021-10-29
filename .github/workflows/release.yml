@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - "**.**.**"
+      - "v**.**.**"
 
 jobs:
   release:
@@ -19,8 +19,8 @@ jobs:
           node-version: '14.x'
           registry-url: 'https://registry.npmjs.org'
       - run: yarn
-      - run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
-      - run: npm version $TAG --git-tag-version=false
+      - run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+      - run: npm version $VERSION --git-tag-version=false
       - run: yarn package-linux
       - name: Release
         uses: softprops/action-gh-release@v1
