@@ -26,13 +26,25 @@ let mainWindow;
 let meetingWindow;
 let tray;
 let isQuiting;
+let messageSequence = 1;
+const schemes = ['tel', 'callto', 'rcvdt', 'rcapp'];
+
+function isValidSchemeUri(url) {
+  let valid = false;
+  schemes.forEach((scheme) => {
+    if (url.indexOf(`${scheme}:`) === 0) {
+      valid = true;
+    }
+  });
+  return valid;
+}
 
 function createTray(iconPath) {
   tray = new Tray(iconPath);
   const contextMenu = Menu.buildFromTemplate([
     {
       label: 'Show App', click: () => {
-        mainWindow.show();
+        openMainWindow();
       }
     },
     {
@@ -144,14 +156,32 @@ function createMainWindow() {
   });
 }
 
-function showMainWindow() {
-  // On OS X it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
-  if (mainWindow === null) {
-    createMainWindow();
-  } else {
-    mainWindow.show();
+function openMainWindow() {
+  if (!mainWindow) {
+    return;
   }
+  if (mainWindow.isMinimized()) {
+    mainWindow.restore();
+  }
+  mainWindow.show();
+  mainWindow.focus();
+}
+
+function handleCustomSchemeURI(url) {
+  if (!isValidSchemeUri(url)) {
+    return;
+  }
+  if (!mainWindow) {
+    return;
+  }
+  messageSequence += 1;
+  mainWindow.webContents.send('COMMUNICATION_BETWEEN_MAIN_AND_RENDER', {
+    event: 'open-url-scheme',
+    payload: {
+      body: url,
+      id: messageSequence,
+    },
+  });
 }
 
 if (!singleInstanceLock) {
@@ -172,11 +202,10 @@ if (!singleInstanceLock) {
     if (!mainWindow) {
       return;
     }
-    if (mainWindow.isMinimized()) {
-      mainWindow.restore();
-    }
-    mainWindow.show();
-    mainWindow.focus();
+    openMainWindow();
+    commandLine.forEach(cmd => {
+      handleCustomSchemeURI(cmd);
+    });
   });
 
   app.on('window-all-closed', () => {
@@ -189,7 +218,13 @@ if (!singleInstanceLock) {
   });
 
   app.on('activate', () => {
-    showMainWindow();
+    // On OS X it's common to re-create a window in the app when the
+  // dock icon is clicked and there are no other windows open.
+    if (mainWindow === null) {
+      createMainWindow();
+    } else {
+      openMainWindow();
+    }
   });
 
   app.on('browser-window-created', (_, window) => {
@@ -197,6 +232,23 @@ if (!singleInstanceLock) {
     if (process.env.DEBUG == 1) {
       window.openDevTools();
     }
+  });
+
+  if (process.defaultApp) {
+    if (process.argv.length >= 2) {
+      schemes.forEach((scheme) => {
+        app.setAsDefaultProtocolClient(scheme, process.execPath, [path.resolve(process.argv[1])]);
+      });
+    }
+  } else {
+    schemes.forEach((scheme) => {
+      app.setAsDefaultProtocolClient(scheme);
+    });
+  }
+  // for macOS, linux
+  app.on('open-url', function (event, url) {
+    event.preventDefault();
+    handleCustomSchemeURI(url);
   });
 
   ipcMain.on('show-notifications-count', (_, count) => {
@@ -252,13 +304,7 @@ if (!singleInstanceLock) {
       }
     }
     if (event === 'WINDOW_MANAGER_FOCUS') {
-      if (mainWindow) {
-        if (mainWindow.isMinimized()) {
-          mainWindow.restore();
-        }
-        mainWindow.show();
-        mainWindow.focus();
-      }
+      openMainWindow();
     }
   });
 }
