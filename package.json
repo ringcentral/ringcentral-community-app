@@ -12,7 +12,7 @@
   },
   "scripts": {
     "start": "electron .",
-    "package-linux": "electron-builder --linux",
+    "package-linux": "electron-builder --linux -p never",
     "package-release": "electron-builder --linux -p always"
   },
   "devDependencies": {
