@@ -203,7 +203,6 @@ if (!singleInstanceLock) {
       return;
     }
     openMainWindow();
-    console.log('commandLine:', commandLine);
     commandLine.forEach(cmd => {
       handleCustomSchemeURI(cmd);
     });
@@ -249,9 +248,9 @@ if (!singleInstanceLock) {
   // for macOS, linux
   app.on('open-url', function (event, url) {
     event.preventDefault();
-    console.log('url:', url);
     handleCustomSchemeURI(url);
   });
+
   ipcMain.on('show-notifications-count', (_, count) => {
     app.setBadgeCount(count);
   });
