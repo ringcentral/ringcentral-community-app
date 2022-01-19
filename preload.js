@@ -29,7 +29,10 @@ window.jupiterElectron = {
   },
   send: (...args) => console.log('send', args),
   dispatch: (...args) => console.log('dispatch', args),
-  pipe: (...args) => console.log('pipe', args),
+  pipe: (event) => {
+    console.log('pipe-message', event);
+    ipcRenderer.send('pipe-message', event);
+  },
   webFrame,
   ipcRenderer,
 };

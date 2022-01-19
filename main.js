@@ -143,6 +143,9 @@ function createMainWindow() {
     }
     menu.popup()
   });
+  mainWindow.webContents.session.on('will-download', (event, item, webContents) => {
+    // show download process
+  });
 
   if (!tray) {
     createTray(iconPath);
@@ -305,6 +308,11 @@ if (!singleInstanceLock) {
     }
     if (event === 'WINDOW_MANAGER_FOCUS') {
       openMainWindow();
+    }
+  });
+  ipcMain.on('pipe-message', (_, event) => {
+    if (event.type === 'download-file') {
+      mainWindow.webContents.downloadURL(event.url);
     }
   });
 }
