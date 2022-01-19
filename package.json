@@ -1,7 +1,7 @@
 {
   "name": "ringcentral-community-app",
   "description": "A RingCentral community app",
-  "version": "0.0.3",
+  "version": "0.0.5",
   "main": "main.js",
   "homepage": "https://github.com/ringcentral/ringcentral-community-app",
   "license": "MIT",
@@ -18,5 +18,8 @@
   "devDependencies": {
     "electron": "^15.3.0",
     "electron-builder": "^22.10.5"
+  },
+  "dependencies": {
+    "electron-progressbar": "^2.0.1"
   }
 }

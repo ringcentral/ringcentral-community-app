@@ -10,6 +10,8 @@ const {
   Tray,
   globalShortcut,
 } = require('electron');
+const ProgressBar = require('electron-progressbar');
+
 const singleInstanceLock = app.requestSingleInstanceLock();
 
 let enablePipeWire = false;
@@ -142,6 +144,53 @@ function createMainWindow() {
       }))
     }
     menu.popup()
+  });
+  mainWindow.webContents.session.on('will-download', (event, item, webContents) => {
+    item.on('updated', (event, state) => {
+      const hasSavePath = !!item.getSavePath();
+      if (!item.progressBar && hasSavePath) {
+        item.progressBar = new ProgressBar({
+          text: `Download ${item.getFilename()}`,
+          detail: 'Download in progress...',
+          indeterminate: false,
+          browserWindow: {
+            closable: true,
+          },
+        });
+        item.progressBar.on('aborted', () => {
+          item.progressBar = null;
+          item.cancel();
+        });
+      }
+      if (!item.progressBar) {
+        return;
+      }
+      if (state === 'interrupted') {
+        item.progressBar.detail = 'Download is interrupted';
+      } else if (state === 'progressing') {
+        if (item.isPaused()) {
+          item.progressBar.detail = 'Download is paused';
+        } else {
+          item.progressBar.detail = 'Download in progress...';
+          if (item.progressBar.isInProgress()) {
+            item.progressBar.value = (item.getReceivedBytes() / item.getTotalBytes()) * 100;
+          }
+        }
+      }
+    });
+    item.once('done', (event, state) => {
+      if (!item.progressBar) {
+        return;
+      }
+      if (state === 'completed') {
+        item.progressBar.setCompleted();
+      } else if (state === 'cancelled') {
+        item.progressBar.close();
+      } else {
+        item.progressBar.detail = 'Download is failed';
+      }
+      item.progressBar = null;
+    });
   });
 
   if (!tray) {
@@ -305,6 +354,11 @@ if (!singleInstanceLock) {
     }
     if (event === 'WINDOW_MANAGER_FOCUS') {
       openMainWindow();
+    }
+  });
+  ipcMain.on('pipe-message', (_, event) => {
+    if (event.type === 'download-file') {
+      mainWindow.webContents.downloadURL(event.url);
     }
   });
 }
