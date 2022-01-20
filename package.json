@@ -17,7 +17,7 @@
   },
   "devDependencies": {
     "electron": "^15.3.0",
-    "electron-builder": "^22.10.5"
+    "electron-builder": "^22.14.5"
   },
   "dependencies": {
     "electron-progressbar": "^2.0.1"
