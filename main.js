@@ -11,6 +11,7 @@ const {
   globalShortcut,
 } = require('electron');
 const ProgressBar = require('electron-progressbar');
+const isMac = process.platform === 'darwin'
 
 const singleInstanceLock = app.requestSingleInstanceLock();
 
@@ -51,11 +52,21 @@ function createTray(iconPath) {
     },
     {
       label: 'About', click: () => {
-        if (mainWindow) {
-          mainWindow.webContents.send('OPEN_ABOUT_DIALOG');
-        }
+        showAboutDialog();
       }
     },
+    { type: 'separator' },
+    {
+      label: 'Zoom In', click: () => {
+        zoomInWindow();
+      }
+    },
+    {
+      label: 'Zoom Out', click: () => {
+        zoomOutWindow();
+      },
+    },
+    { type: 'separator' },
     {
       label: 'Quit', click: () => {
         app.quit();
@@ -223,6 +234,25 @@ function openMainWindow() {
   mainWindow.focus();
 }
 
+function showAboutDialog() {
+  if (mainWindow) {
+    mainWindow.webContents.send('OPEN_ABOUT_DIALOG');
+  }
+}
+
+function zoomInWindow() {
+  if (mainWindow) {
+    mainWindow.webContents.setZoomLevel(mainWindow.webContents.getZoomLevel() + 0.1);
+  }
+}
+
+function zoomOutWindow() {
+  if (mainWindow) {
+    const zoomLevel = mainWindow.webContents.getZoomLevel() - 0.1;
+    mainWindow.webContents.setZoomLevel(zoomLevel < 0 ? 0 : zoomLevel);
+  }
+}
+
 function handleCustomSchemeURI(url) {
   if (!isValidSchemeUri(url)) {
     return;
@@ -240,6 +270,47 @@ function handleCustomSchemeURI(url) {
   });
 }
 
+const template = [
+  {
+    label: app.name,
+    submenu: [
+      {
+        label: 'About',
+        click: () => {
+          showAboutDialog();
+        }
+      },
+      {
+        label: 'Quit',
+        accelerator: 'CmdOrCtrl+Q', click: () => app.quit()
+      },
+    ]
+  },
+  {
+    label: 'Edit',
+    submenu: [
+      { role: 'undo' },
+      { role: 'redo' },
+      { type: 'separator' },
+      { role: 'cut' },
+      { role: 'copy' },
+      { role: 'paste' },
+    ],
+  },
+  {
+    label: 'View',
+    submenu: [
+      { role: 'reload' },
+      { role: 'resetZoom' },
+      { role: 'zoomIn' },
+      { role: 'zoomOut' },
+    ]
+  },
+];
+
+const menu = Menu.buildFromTemplate(template);
+Menu.setApplicationMenu(menu);
+
 if (!singleInstanceLock) {
   console.warn('App already running');
   app.quit();
@@ -248,6 +319,14 @@ if (!singleInstanceLock) {
     globalShortcut.register('CommandOrControl+Q', () => {
       app.quit();
     });
+    if (!isMac) {
+      globalShortcut.register('CommandOrControl+I', () => {
+        zoomInWindow();
+      });
+      globalShortcut.register('CommandOrControl+O', () => {
+        zoomOutWindow();
+      });
+    }
   }).then(createMainWindow);
 
   app.on('before-quit', () => {
@@ -268,7 +347,7 @@ if (!singleInstanceLock) {
     // On OS X it is common for applications and their menu bar
     // to stay active until the user quits explicitly with Cmd + Q
     mainWindow = null;
-    if (process.platform !== 'darwin') {
+    if (!isMac) {
       app.quit();
     }
   });
