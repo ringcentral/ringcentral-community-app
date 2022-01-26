@@ -50,6 +50,13 @@ function createTray(iconPath) {
       }
     },
     {
+      label: 'About', click: () => {
+        if (mainWindow) {
+          mainWindow.webContents.send('OPEN_ABOUT_DIALOG');
+        }
+      }
+    },
+    {
       label: 'Quit', click: () => {
         app.quit();
       }
@@ -143,7 +150,7 @@ function createMainWindow() {
         click: () => mainWindow.webContents.replaceMisspelling(suggestion)
       }))
     }
-    menu.popup()
+    menu.popup();
   });
   mainWindow.webContents.session.on('will-download', (event, item, webContents) => {
     item.on('updated', (event, state) => {
@@ -300,7 +307,7 @@ if (!singleInstanceLock) {
     handleCustomSchemeURI(url);
   });
 
-  ipcMain.on('show-notifications-count', (_, count) => {
+  ipcMain.on('SHOW_NOTIFICATIONS_COUNT', (_, count) => {
     app.setBadgeCount(count);
   });
   ipcMain.on('COMMUNICATION_BETWEEN_MAIN_AND_RENDER', (_, { event, payload, body }) => {
@@ -310,7 +317,6 @@ if (!singleInstanceLock) {
       if (!meetingWindow) {
         const sess = session.fromPartition('persist:rcvstorage');
         const userAgent = getUserAgent(sess, true);
-        console.log(userAgent);
         sess.setUserAgent(userAgent);
         meetingWindow = new BrowserWindow({
           parent: mainWindow,
@@ -356,9 +362,14 @@ if (!singleInstanceLock) {
       openMainWindow();
     }
   });
-  ipcMain.on('pipe-message', (_, event) => {
+  ipcMain.on('PIPE_MESSAGE', (_, event) => {
     if (event.type === 'download-file') {
       mainWindow.webContents.downloadURL(event.url);
     }
+  });
+  ipcMain.on('RC_COMMUNITY_APP_LOADED', () => {
+    mainWindow.webContents.send('COMMUNITY_APP_INFO', {
+      appVersion: app.getVersion(),
+    });
   });
 }
