@@ -16,7 +16,7 @@
     "package-release": "electron-builder --linux -p always"
   },
   "devDependencies": {
-    "electron": "^15.3.0",
+    "electron": "^15.3.6",
     "electron-builder": "^22.14.5"
   },
   "dependencies": {
