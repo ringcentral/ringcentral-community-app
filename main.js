@@ -56,16 +56,9 @@ function createTray(iconPath) {
       }
     },
     { type: 'separator' },
-    {
-      label: 'Zoom In', click: () => {
-        zoomInWindow();
-      }
-    },
-    {
-      label: 'Zoom Out', click: () => {
-        zoomOutWindow();
-      },
-    },
+    { role: 'resetZoom' },
+    { role: 'zoomIn' },
+    { role: 'zoomOut' },
     { type: 'separator' },
     {
       label: 'Quit', click: () => {
@@ -87,6 +80,19 @@ function getUserAgent(sess, noElectron = false) {
     userAgent = `${userAgent} PipeWire`;
   }
   return userAgent;
+}
+
+function zoomInWindow() {
+  if (mainWindow) {
+    mainWindow.webContents.setZoomLevel(mainWindow.webContents.getZoomLevel() + 0.1);
+  }
+}
+
+function zoomOutWindow() {
+  if (mainWindow) {
+    const zoomLevel = mainWindow.webContents.getZoomLevel() - 0.1;
+    mainWindow.webContents.setZoomLevel(zoomLevel < 0 ? 0 : zoomLevel);
+  }
 }
 
 function createMainWindow() {
@@ -162,6 +168,14 @@ function createMainWindow() {
       }))
     }
     menu.popup();
+  });
+  mainWindow.webContents.on('zoom-changed', (event, zoomDirection) => {
+    if (zoomDirection === 'in') {
+      zoomInWindow();
+    }
+    if (zoomDirection === 'out') {
+      zoomOutWindow();
+    }
   });
   mainWindow.webContents.session.on('will-download', (event, item, webContents) => {
     item.on('updated', (event, state) => {
@@ -240,19 +254,6 @@ function showAboutDialog() {
   }
 }
 
-function zoomInWindow() {
-  if (mainWindow) {
-    mainWindow.webContents.setZoomLevel(mainWindow.webContents.getZoomLevel() + 0.1);
-  }
-}
-
-function zoomOutWindow() {
-  if (mainWindow) {
-    const zoomLevel = mainWindow.webContents.getZoomLevel() - 0.1;
-    mainWindow.webContents.setZoomLevel(zoomLevel < 0 ? 0 : zoomLevel);
-  }
-}
-
 function handleCustomSchemeURI(url) {
   if (!isValidSchemeUri(url)) {
     return;
@@ -301,9 +302,14 @@ const template = [
     label: 'View',
     submenu: [
       { role: 'reload' },
+      { role: 'forceReload' },
+      { role: 'toggleDevTools' },
+      { type: 'separator' },
       { role: 'resetZoom' },
       { role: 'zoomIn' },
       { role: 'zoomOut' },
+      { type: 'separator' },
+      { role: 'togglefullscreen' },
     ]
   },
 ];
@@ -319,14 +325,6 @@ if (!singleInstanceLock) {
     globalShortcut.register('CommandOrControl+Q', () => {
       app.quit();
     });
-    if (!isMac) {
-      globalShortcut.register('CommandOrControl+I', () => {
-        zoomInWindow();
-      });
-      globalShortcut.register('CommandOrControl+O', () => {
-        zoomOutWindow();
-      });
-    }
   }).then(createMainWindow);
 
   app.on('before-quit', () => {
