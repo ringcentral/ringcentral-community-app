@@ -158,15 +158,28 @@ function createMainWindow() {
     if (!hasText && !isEditable) {
       return;
     }
-    const menu = new Menu()
+    const menu = new Menu();
 
     // Add each spelling suggestion
     for (const suggestion of params.dictionarySuggestions) {
       menu.append(new MenuItem({
         label: suggestion,
         click: () => mainWindow.webContents.replaceMisspelling(suggestion)
-      }))
+      }));
     }
+    const spellcheckMenu = new Menu();
+    mainWindow.webContents.session.availableSpellCheckerLanguages.forEach((lang) => {
+      spellcheckMenu.append(new MenuItem({
+        label: lang,
+        click: () => {
+          mainWindow.webContents.session.setSpellCheckerLanguages([lang]);
+        }
+      }));
+    });
+    menu.append(new MenuItem({
+      label: 'Spell Checker Language',
+      submenu: spellcheckMenu,
+    }));
     menu.popup();
   });
   mainWindow.webContents.on('zoom-changed', (event, zoomDirection) => {
@@ -314,8 +327,8 @@ const template = [
   },
 ];
 
-const menu = Menu.buildFromTemplate(template);
-Menu.setApplicationMenu(menu);
+const mainMenu = Menu.buildFromTemplate(template);
+Menu.setApplicationMenu(mainMenu);
 
 if (!singleInstanceLock) {
   console.warn('App already running');
