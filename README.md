@@ -5,15 +5,15 @@ It aims to build a community version of [RingCentral desktop app](https://www.ri
 
 ![RingCentral community app in ubuntu](https://user-images.githubusercontent.com/7036536/120785928-37491200-c560-11eb-8eaf-30afce528aca.png)
 
-## Usage
+## Installation
 
 > Only Tested at Ubuntu and Fedora now
 
-For Linux, download installer files (deb, AppImage and rpm) [here](https://github.com/embbnux/ringcentral-community-app/releases).
+For Linux, download installer files (deb, AppImage and rpm) [here](https://github.com/ringcentral/ringcentral-community-app/releases).
 
 
 ```bash
-$ sudo dpkg -i ringcentral-community-app_0.0.1_amd64.deb
+$ sudo dpkg -i ringcentral-community-app_0.0.6_amd64.deb
 ```
 
 ## Development
