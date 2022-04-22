@@ -8,7 +8,6 @@ const {
   Menu,
   MenuItem,
   Tray,
-  globalShortcut,
 } = require('electron');
 const ProgressBar = require('electron-progressbar');
 const isMac = process.platform === 'darwin'
@@ -248,6 +247,13 @@ function createMainWindow() {
       event.returnValue = false;
     }
   });
+
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if ((input.control || input.meta) && input.key.toLowerCase() === 'q') {
+      console.log('Pressed Control/Command+Q')
+      app.quit();
+    }
+  });
 }
 
 function openMainWindow() {
@@ -334,11 +340,7 @@ if (!singleInstanceLock) {
   console.warn('App already running');
   app.quit();
 } else {
-  app.whenReady().then(() => {
-    globalShortcut.register('CommandOrControl+Q', () => {
-      app.quit();
-    });
-  }).then(createMainWindow);
+  app.whenReady().then(createMainWindow);
 
   app.on('before-quit', () => {
     isQuiting = true;
