@@ -14,16 +14,20 @@ window.jupiterElectron = {
   ...window.jupiterElectron,
   getElectronVersionInfo: () => {
     return {
+      isRCElectron: false,
+      brandName: 'RingCentral',
+      userAgentName: 'RCAppDesktop',
       electronVersion: process.versions.electron,
-      electronAppVersion: '21.4.20.197 Community',
-      electronAppVersionNumber: '21.4.20',
+      electronAppVersion: '22.1.31.2868 Community',
+      electronAppVersionNumber: '22.1.31',
       platform: process.platform,
       chromiumVersion: process.versions.chrome,
       arch: process.arch,
       dependencies: {
-        zoomSDKVersion: '49.0.0',
-        rcvDesktopSDKVersion: '49.0.0',
-        rcvSDKVersion: '49.0.0'
+        rcvDesktopSDKVersion: '52.3.0',
+        rcvSDKVersion: '22.1.18',
+        zoomIsDecoupled: true,
+        zoomSDKVersion: '5.4.55057.1129 Decoupled (always)',
       },
     };
   },

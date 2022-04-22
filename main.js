@@ -8,7 +8,6 @@ const {
   Menu,
   MenuItem,
   Tray,
-  globalShortcut,
 } = require('electron');
 const ProgressBar = require('electron-progressbar');
 const isMac = process.platform === 'darwin'
@@ -237,6 +236,20 @@ function createMainWindow() {
       item.progressBar = null;
     });
   });
+  const CORSfilter = {
+    urls: ['https://v.ringcentral.com/*'],
+  };
+  mainWindow.webContents.session.webRequest.onHeadersReceived(CORSfilter, (details, callback) => {
+    const url = new URL(details.referrer);
+    if (url.origin === 'https://app.ringcentral.com') {
+      if (details.responseHeaders['access-control-allow-origin']) {
+        details.responseHeaders['access-control-allow-origin'] = ['https://app.ringcentral.com'];
+      } else {
+        details.responseHeaders['Access-Control-Allow-Origin'] = ['https://app.ringcentral.com'];
+      }
+    }
+    callback({ responseHeaders: details.responseHeaders })
+  });
 
   if (!tray) {
     createTray(iconPath);
@@ -246,6 +259,13 @@ function createMainWindow() {
       event.preventDefault();
       mainWindow.hide();
       event.returnValue = false;
+    }
+  });
+
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if ((input.control || input.meta) && input.key.toLowerCase() === 'q') {
+      console.log('Pressed Control/Command+Q')
+      app.quit();
     }
   });
 }
@@ -334,11 +354,7 @@ if (!singleInstanceLock) {
   console.warn('App already running');
   app.quit();
 } else {
-  app.whenReady().then(() => {
-    globalShortcut.register('CommandOrControl+Q', () => {
-      app.quit();
-    });
-  }).then(createMainWindow);
+  app.whenReady().then(createMainWindow);
 
   app.on('before-quit', () => {
     isQuiting = true;
