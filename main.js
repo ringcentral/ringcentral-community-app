@@ -236,6 +236,20 @@ function createMainWindow() {
       item.progressBar = null;
     });
   });
+  const CORSfilter = {
+    urls: ['https://v.ringcentral.com/*'],
+  };
+  mainWindow.webContents.session.webRequest.onHeadersReceived(CORSfilter, (details, callback) => {
+    const url = new URL(details.referrer);
+    if (url.origin === 'https://app.ringcentral.com') {
+      if (details.responseHeaders['access-control-allow-origin']) {
+        details.responseHeaders['access-control-allow-origin'] = ['https://app.ringcentral.com'];
+      } else {
+        details.responseHeaders['Access-Control-Allow-Origin'] = ['https://app.ringcentral.com'];
+      }
+    }
+    callback({ responseHeaders: details.responseHeaders })
+  });
 
   if (!tray) {
     createTray(iconPath);
