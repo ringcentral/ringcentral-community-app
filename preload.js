@@ -92,3 +92,16 @@ ipcRenderer.on('COMMUNITY_APP_INFO', (event, arg) => {
 ipcRenderer.on('OPEN_ABOUT_DIALOG', (event, arg) => {
   window.jupiterElectron.handleAboutPage(window.rcCommunity.appVersion, process.versions.electron);
 });
+
+function disableHerculesSetting() {
+  const globalUID = localStorage.getItem('global.account.UD');
+  if (globalUID) {
+    localStorage.setItem(`${JSON.parse(globalUID)}.SETTING.RCVE_HERCULES_ENABLE`, `{"source":false}`);
+  }
+}
+
+disableHerculesSetting();
+
+setInterval(() => {
+  disableHerculesSetting();
+}, 10000);
