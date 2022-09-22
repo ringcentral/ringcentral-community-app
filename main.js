@@ -240,6 +240,10 @@ function createMainWindow() {
     urls: ['https://v.ringcentral.com/*'],
   };
   mainWindow.webContents.session.webRequest.onHeadersReceived(CORSfilter, (details, callback) => {
+    if (!details.referrer) {
+      callback({ responseHeaders: details.responseHeaders })
+      return;
+    }
     const url = new URL(details.referrer);
     if (url.origin === 'https://app.ringcentral.com') {
       if (details.responseHeaders['access-control-allow-origin']) {
