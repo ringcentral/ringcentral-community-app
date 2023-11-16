@@ -8,6 +8,7 @@ const {
   Menu,
   MenuItem,
   Tray,
+  desktopCapturer,
 } = require('electron');
 const ProgressBar = require('electron-progressbar');
 const isMac = process.platform === 'darwin'
@@ -481,5 +482,8 @@ if (!singleInstanceLock) {
     mainWindow.webContents.send('COMMUNITY_APP_INFO', {
       appVersion: app.getVersion(),
     });
+  });
+  ipcMain.handle('GET-SCREEN-SOURCE', (_, params) => {
+    return desktopCapturer.getSources({ types: params.types });
   });
 }
