@@ -1,10 +1,14 @@
 console.log('meeting preload');
 
-const { desktopCapturer } = require('electron');
+const { ipcRenderer } = require('electron');
+
+function getScreenSources(types) {
+  return ipcRenderer.invoke('GET-SCREEN-SOURCE', { types });
+}
 
 window.navigator.mediaDevices.getDisplayMedia = async (options) => {
   if (navigator.userAgent.indexOf('PipeWire') > -1) {
-    const sources = await desktopCapturer.getSources({ types: ['screen'] });
+    const sources = await getScreenSources(['screen']);
     return window.navigator.mediaDevices.getUserMedia({
       audio: false,
       video: {
@@ -19,7 +23,7 @@ window.navigator.mediaDevices.getDisplayMedia = async (options) => {
   }
   return new Promise(async (resolve, reject) => {
     try {
-      const sources = await desktopCapturer.getSources({ types: ['screen', 'window'] });
+      const sources = await getScreenSources(['screen', 'window']);
       const style = document.createElement('style');
       style.textContent = `
           .desktop-capturer-selection {
