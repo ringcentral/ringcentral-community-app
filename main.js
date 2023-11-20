@@ -1,4 +1,5 @@
 const path = require('path');
+const { cpus } = require('os');
 const {
   app,
   BrowserWindow,
@@ -14,12 +15,15 @@ const ProgressBar = require('electron-progressbar');
 const isMac = process.platform === 'darwin'
 
 const singleInstanceLock = app.requestSingleInstanceLock();
+const webAppUrl = 'https://app.ringcentral.com';
 
 let enablePipeWire = false;
 if (
-  process.env.ORIGINAL_XDG_CURRENT_DESKTOP === 'GNOME' ||
-  process.env.ORIGINAL_XDG_CURRENT_DESKTOP === 'KDE' ||
-  process.env.ORIGINAL_XDG_CURRENT_DESKTOP === 'SWAY'
+  process.env.ORIGINAL_XDG_CURRENT_DESKTOP && (
+    process.env.ORIGINAL_XDG_CURRENT_DESKTOP.indexOf('GNOME') > -1 ||
+    process.env.ORIGINAL_XDG_CURRENT_DESKTOP.indexOf('KDE') > -1 ||
+    process.env.ORIGINAL_XDG_CURRENT_DESKTOP.indexOf('SWAY') > -1
+  )
 ) {
   enablePipeWire = true;
   app.commandLine.appendSwitch('enable-features', 'WebRTCPipeWireCapturer');
@@ -27,6 +31,7 @@ if (
 
 let mainWindow;
 let meetingWindow;
+let childWindowMap = new Map();
 let tray;
 let isQuiting;
 let messageSequence = 1;
@@ -122,7 +127,7 @@ function createMainWindow() {
   if (process.env.DEBUG == 1) {
     mainWindow.webContents.openDevTools();
   }
-  mainWindow.loadURL('https://app.ringcentral.com');
+  mainWindow.loadURL(webAppUrl);
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (
       url.indexOf('http') === 0 &&
@@ -136,7 +141,7 @@ function createMainWindow() {
       action: 'allow',
     };
   });
-  mainWindow.webContents.on('did-create-window', (childWindow) => {
+  mainWindow.webContents.on('did-create-window', (childWindow, { frameName }) => {
     childWindow.webContents.on('will-navigate', (e, url) => {
       if (url.indexOf('https://meetings.ringcentral.com') > -1) {
         e.preventDefault();
@@ -144,6 +149,11 @@ function createMainWindow() {
         childWindow.close();
         return;
       }
+      childWindowMap.set(frameName, childWindow);
+      childWindow.show();
+      childWindow.on('close', () => {
+        childWindowMap.delete(frameName);
+      });
       // const userAgent = getUserAgent(sess, true);
       // childWindow.webContents.loadURL(url, { userAgent });
     });
@@ -246,11 +256,11 @@ function createMainWindow() {
       return;
     }
     const url = new URL(details.referrer);
-    if (url.origin === 'https://app.ringcentral.com') {
+    if (url.origin === webAppUrl) {
       if (details.responseHeaders['access-control-allow-origin']) {
-        details.responseHeaders['access-control-allow-origin'] = ['https://app.ringcentral.com'];
+        details.responseHeaders['access-control-allow-origin'] = [webAppUrl];
       } else {
-        details.responseHeaders['Access-Control-Allow-Origin'] = ['https://app.ringcentral.com'];
+        details.responseHeaders['Access-Control-Allow-Origin'] = [webAppUrl];
       }
     }
     callback({ responseHeaders: details.responseHeaders })
@@ -419,8 +429,34 @@ if (!singleInstanceLock) {
   });
 
   ipcMain.on('SHOW_NOTIFICATIONS_COUNT', (_, count) => {
-    app.setBadgeCount(count);
+    app.dock.setBadge(count ? count.toString() : '');
   });
+
+  function sendReceivedToRender(event, id) {
+    const payload = {
+      type: 'RECEIVED',
+      id,
+    };
+    mainWindow.webContents.send('COMMUNICATION_BETWEEN_MAIN_AND_RENDER', {
+      event,
+      payload,
+      body: payload,
+    });
+  }
+
+  function sendResponseToRender(event, id, body) {
+    const payload = {
+      type: 'RESPONSE',
+      id,
+      body,
+    };
+    mainWindow.webContents.send('COMMUNICATION_BETWEEN_MAIN_AND_RENDER', {
+      event,
+      payload,
+      body: payload,
+    });
+  }
+
   ipcMain.on('COMMUNICATION_BETWEEN_MAIN_AND_RENDER', (_, { event, payload, body }) => {
     // console.log('event', event);
     // console.log('payload', payload);
@@ -460,6 +496,8 @@ if (!singleInstanceLock) {
       shell.openExternal(`https://meetings.ringcentral.com/join?sid=${payload.body.meetingnumber}&uname=${uname}`);
     }
     if (event === 'WINDOW_MANAGER_CREATE') {
+      sendReceivedToRender(event, payload.id);
+      const windowId = `${Date.now()}`;
       if (payload.body.options.alwaysOpenInBrowser) {
         shell.openExternal(payload.body.url);
       } else {
@@ -467,10 +505,129 @@ if (!singleInstanceLock) {
           parent: mainWindow,
         });
         childWindow.loadURL(payload.body.url);
+        childWindowMap.set(windowId, childWindow);
+        childWindow.on('close', () => {
+          childWindowMap.delete(windowId);
+        });
       }
+      sendResponseToRender(event, payload.id, windowId);
+    }
+    if (event === 'WINDOW_MANAGER_CLOSE') {
+      sendReceivedToRender(event, payload.id);
+      const childWindow = childWindowMap.get(payload.body.windowId);
+      if (childWindow) {
+        childWindow.close();
+      }
+      sendResponseToRender(event, payload.id, undefined);
     }
     if (event === 'WINDOW_MANAGER_FOCUS') {
-      openMainWindow();
+      sendReceivedToRender(event, payload.id);
+      const childWindow = childWindowMap.get(payload.body);
+      if (childWindow) {
+        childWindow.show();
+        childWindow.focus();
+      } else {
+        openMainWindow();
+      }
+      sendResponseToRender(event, payload.id, undefined);
+    }
+    if (event === 'WINDOW_MANAGER_REMOVE_MENU') {
+      sendReceivedToRender(event, payload.id);
+      const childWindow = childWindowMap.get(payload.body);
+      if (childWindow) {
+        childWindow.removeMenu();
+      }
+      sendResponseToRender(event, payload.id, undefined);
+    }
+    if (event === 'WINDOW_MANAGER_DESTROY') {
+      sendReceivedToRender(event, payload.id);
+      const childWindow = childWindowMap.get(payload.body);
+      if (childWindow) {
+        childWindow.close();
+      }
+      sendResponseToRender(event, payload.id, undefined);
+    }
+    if (event === 'IS_API_COMPATIBLE_EVENT') {
+      sendReceivedToRender(event, payload.id);
+      sendResponseToRender(event, payload.id, true);
+    }
+    if (event === 'INVOKE_MODULE_API') {
+      if (payload.body.api === 'GET_SYSTEM_CPU_INFO') {
+        sendReceivedToRender(event, payload.id);
+        const result = cpus();
+        sendResponseToRender(event, payload.id, {
+          core: result.length,
+          model: result[0]?.model,
+        });
+      } else if (payload.body.api === 'GET_SYSTEM_CPU_USAGE') {
+        sendReceivedToRender(event, payload.id);
+        const result = cpus();
+        const totalUsage = result.reduce((acc, cur) => {
+          acc.user += cur.times.user;
+          acc.nice += cur.times.nice;
+          acc.sys += cur.times.sys;
+          acc.idle += cur.times.idle;
+          acc.irq += cur.times.irq;
+          return acc;
+        }, { user: 0, nice: 0, sys: 0, idle: 0, irq: 0 });
+        sendResponseToRender(event, payload.id, totalUsage.idle / (totalUsage.user + totalUsage.nice + totalUsage.sys + totalUsage.idle + totalUsage.irq));
+      } else if (payload.body.api === 'FLUSH_STORAGE_DATA') {
+        sendReceivedToRender(event, payload.id);
+        const sess = mainWindow.webContents.session;
+        sess.flushStorageData();
+        sendResponseToRender(event, payload.id, undefined);
+      } else if (payload.body.api === 'GET_CURRENT_FOCUS_WINDOW_ID') {
+        sendReceivedToRender(event, payload.id);
+        let focusWindow;
+        childWindowMap.forEach((childWindow) => {
+          if (childWindow.isFocused()) {
+            focusWindow = childWindow;
+          }
+        });
+        sendResponseToRender(event, payload.id, focusWindow && focusWindow.id);
+      } else if (payload.body.api === 'GET_WINDOW_IDS') {
+        sendReceivedToRender(event, payload.id);
+        const ids = [];
+        childWindowMap.forEach((_, key) => {
+          ids.push(key);
+        });
+        sendResponseToRender(event, payload.id, ids);
+      } else if (payload.body.api === 'IS_WINDOW_MINIMIZED') {
+        sendReceivedToRender(event, payload.id);
+        sendResponseToRender(event, payload.id, mainWindow.isMinimized());
+      } else if (payload.body.api === 'SET_BACKGROUND_COLOR') {
+        sendReceivedToRender(event, payload.id);
+        const win = childWindowMap.get(payload.body.params.id);
+        if (win) {
+          win.setBackgroundColor(payload.body.params.color);
+        }
+      } else if (payload.body.api === 'GET_BOUNDS') {
+        sendReceivedToRender(event, payload.id);
+        const win = childWindowMap.get(payload.body.params);
+        if (win) {
+          sendResponseToRender(event, payload.id, win.getBounds());
+        }
+      } else if (payload.body.api === 'GET_CONTENT_BOUNDS') {
+        sendReceivedToRender(event, payload.id);
+        const win = childWindowMap.get(payload.body.params);
+        if (win) {
+          sendResponseToRender(event, payload.id, win.getContentBounds());
+        }
+      } else if (payload.body.api === 'SET_BOUNDS') {
+        sendReceivedToRender(event, payload.id);
+        const win = childWindowMap.get(payload.body.params.id);
+        if (win) {
+          win.setBounds({
+            x: payload.body.params.x,
+            y: payload.body.params.y,
+            width: payload.body.params.width,
+            height: payload.body.params.height,
+          });
+        }
+      }
+    }
+    if (event === 'app.permission.query') {
+      sendResponseToRender(event, payload.id, 'granted');
     }
   });
   ipcMain.on('PIPE_MESSAGE', (_, event) => {

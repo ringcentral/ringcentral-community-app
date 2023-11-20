@@ -8,7 +8,7 @@ function getScreenSources(types) {
 
 window.navigator.mediaDevices.getDisplayMedia = async (options) => {
   if (navigator.userAgent.indexOf('PipeWire') > -1) {
-    const sources = await getScreenSources(['screen']);
+    const sources = await getScreenSources(['screen', 'window']);
     return window.navigator.mediaDevices.getUserMedia({
       audio: false,
       video: {

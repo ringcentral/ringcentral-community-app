@@ -38,26 +38,15 @@ window.jupiterElectron = {
   },
   webFrame,
   ipcRenderer,
+  setBadgeCount: (count) => {
+    ipcRenderer.send('SHOW_NOTIFICATIONS_COUNT', count);
+  },
 };
 
 window.rcCommunity = {};
 
 window.addEventListener('load', () => {
   ipcRenderer.send('RC_COMMUNITY_APP_LOADED');
-  const observer = new MutationObserver(function(mutations) {
-    mutations.forEach(function(mutation) {
-      const matchedTitle = document.title.match(/\(\d+\)/);
-      if (matchedTitle) {
-        const messageUnreadCount = Number.parseInt(matchedTitle[0].match(/\d+/)[0]);
-        ipcRenderer.send('SHOW_NOTIFICATIONS_COUNT', messageUnreadCount);
-      } else {
-        ipcRenderer.send('SHOW_NOTIFICATIONS_COUNT', 0);
-      }
-    });
-  });
-  observer.observe(document.querySelector('title'), {
-    childList: true,
-  });
   const aboutPageObserver = new MutationObserver(function(mutations) {
     mutations.forEach(function(mutation) {
       if (mutation.type === 'childList') {
