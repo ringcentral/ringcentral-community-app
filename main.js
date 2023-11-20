@@ -429,7 +429,7 @@ if (!singleInstanceLock) {
   });
 
   ipcMain.on('SHOW_NOTIFICATIONS_COUNT', (_, count) => {
-    app.dock.setBadge(count ? count.toString() : '');
+    app.setBadgeCount(count ? count : 0);
   });
 
   function sendReceivedToRender(event, id) {
