@@ -16,10 +16,10 @@
     "package-release": "electron-builder --linux -p always"
   },
   "devDependencies": {
-    "electron": "^26.6.0",
-    "electron-builder": "^24.6.3"
+    "electron": "^27.1.2",
+    "electron-builder": "^24.9.1"
   },
   "dependencies": {
-    "electron-progressbar": "^2.0.1"
+    "electron-progressbar": "^2.1.0"
   }
 }
