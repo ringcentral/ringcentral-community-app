@@ -151,7 +151,7 @@ function createMainWindow() {
       }
       childWindowMap.set(frameName, childWindow);
       childWindow.show();
-      childWindow.on('close', () => {
+      childWindow.on('closed', () => {
         childWindowMap.delete(frameName);
       });
       // const userAgent = getUserAgent(sess, true);
@@ -478,7 +478,7 @@ if (!singleInstanceLock) {
             preload: path.join(__dirname, 'meeting-preload.js'),
           }
         });
-        meetingWindow.on('close', (event) => {
+        meetingWindow.on('closed', (event) => {
           meetingWindow = null;
         });
         sess.webRequest.onBeforeSendHeaders((details, callback) => {
@@ -506,7 +506,7 @@ if (!singleInstanceLock) {
         });
         childWindow.loadURL(payload.body.url);
         childWindowMap.set(windowId, childWindow);
-        childWindow.on('close', () => {
+        childWindow.on('closed', () => {
           childWindowMap.delete(windowId);
         });
       }
