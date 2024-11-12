@@ -42,3 +42,7 @@ linux:
   executableName: ringcentral-community-app
   executableArgs:
     - --no-sandbox
+rpm:
+  depends:
+    - /usr/lib64/libuuid.so.1
+
