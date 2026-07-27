@@ -31,6 +31,10 @@ if (
 
 let mainWindow;
 let meetingWindow;
+let activeMeetingId;
+const rcvStore = {
+  meetings: {},
+};
 let childWindowMap = new Map();
 let tray;
 let isQuiting;
@@ -457,10 +461,68 @@ if (!singleInstanceLock) {
     });
   }
 
+  function sendRcvStoreUpdate() {
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      return;
+    }
+    mainWindow.webContents.send('COMMUNICATION_BETWEEN_MAIN_AND_RENDER', {
+      event: 'STORE:UPDATE',
+      body: {
+        name: 'RCVStore',
+        key: 'meetings',
+        value: rcvStore.meetings,
+      },
+    });
+  }
+
+  function notifyMeetingWindowClosed(meetingId) {
+    if (!mainWindow || mainWindow.isDestroyed() || !meetingId) {
+      return;
+    }
+    messageSequence += 1;
+    mainWindow.webContents.send('COMMUNICATION_BETWEEN_MAIN_AND_RENDER', {
+      event: 'rcv:rcv-window-did-close',
+      payload: {
+        body: meetingId,
+        id: messageSequence,
+      },
+    });
+  }
+
+  function setMeetingWindowOpened(meeting, isWindowOpened) {
+    const meetingKey = meeting && meeting.meetId;
+    if (!meetingKey) {
+      return;
+    }
+    rcvStore.meetings = {
+      ...rcvStore.meetings,
+      [meetingKey]: {
+        ...rcvStore.meetings[meetingKey],
+        meetId: meetingKey,
+        ...(meeting.meetType ? { meetType: meeting.meetType } : {}),
+        isWindowOpened,
+      },
+    };
+    sendRcvStoreUpdate();
+  }
+
   ipcMain.on('COMMUNICATION_BETWEEN_MAIN_AND_RENDER', (_, { event, payload, body }) => {
     // console.log('event', event);
     // console.log('payload', payload);
+    if (event === 'STORE:GET_STORE' && payload.body.storeName === 'RCVStore') {
+      sendReceivedToRender(event, payload.id);
+      sendResponseToRender(event, payload.id, {
+        code: 0,
+        res: rcvStore,
+      });
+    }
     if (event === 'rcv:open-rcv') {
+      const meeting = payload.body;
+      if (activeMeetingId && activeMeetingId !== meeting.meetId) {
+        setMeetingWindowOpened({ meetId: activeMeetingId }, false);
+      }
+      activeMeetingId = meeting.meetId;
+      setMeetingWindowOpened(meeting, true);
       if (!meetingWindow) {
         const sess = session.fromPartition('persist:rcvstorage');
         const userAgent = getUserAgent(sess, true);
@@ -479,6 +541,9 @@ if (!singleInstanceLock) {
           }
         });
         meetingWindow.on('closed', (event) => {
+          notifyMeetingWindowClosed(activeMeetingId);
+          setMeetingWindowOpened({ meetId: activeMeetingId }, false);
+          activeMeetingId = undefined;
           meetingWindow = null;
         });
         sess.webRequest.onBeforeSendHeaders((details, callback) => {
@@ -489,7 +554,7 @@ if (!singleInstanceLock) {
           });
         });
       }
-      meetingWindow.loadURL(payload.body.url);
+      meetingWindow.loadURL(meeting.url);
     }
     if (event === 'ZOOM_ELECTRON_SERVICE:START_MEETING') {
       const uname = payload.body.username ? payload.body.username.split(' ').join('+') : '';
